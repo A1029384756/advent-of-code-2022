@@ -1,21 +1,13 @@
-use std::{fs::read_to_string, collections::BinaryHeap, cmp::Reverse};
+use std::{cmp::Reverse, collections::BinaryHeap, fs::read_to_string};
 
 fn get_calories_from_file(path: &str) -> Vec<u32> {
     match read_to_string(path) {
-        Ok(str) => {
-            let mut result: Vec<u32> = vec![];
-            let mut amount: u32 = 0;
-            str.lines().for_each(|line| {
-                if line.is_empty() {
-                    result.push(amount);
-                    amount = 0;
-                } else {
-                    amount += line.parse::<u32>().unwrap();
-                }
-            });
-
-            result
-        }
+        Ok(str) => str
+            .lines()
+            .collect::<Vec<_>>()
+            .split(|line| line.is_empty())
+            .map(|group| group.iter().map(|v| v.parse::<u32>().unwrap()).sum())
+            .collect(),
         Err(_) => vec![],
     }
 }
@@ -33,7 +25,10 @@ fn part_2(elf_carry_load: &Vec<u32>) {
         }
     }
 
-    println!("Part 2: {:?}", heap.into_iter().map(|rev| rev.0).sum::<u32>());
+    println!(
+        "Part 2: {:?}",
+        heap.into_iter().map(|rev| rev.0).sum::<u32>()
+    );
 }
 
 fn main() {
