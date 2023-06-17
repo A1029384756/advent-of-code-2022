@@ -21,29 +21,23 @@ fn get_priority_from_char(c: char) -> Result<u32, ()> {
     }
 }
 
-fn part_1(compartments: Vec<&str>) -> u32 {
+fn part_1(compartments: Vec<&str>) -> Result<u32, ()> {
     compartments
         .iter()
         .map(|compartment| match find_common_item_in_bag(compartment) {
-            Some(item) => match get_priority_from_char(item) {
-                Ok(priority) => priority,
-                Err(_) => panic!("Invalid char outside of boundary"),
-            },
+            Some(item) => get_priority_from_char(item),
             None => panic!("No matching item in rucksack"),
         })
         .sum()
 }
 
-fn part_2(compartments: Vec<&str>) -> u32 {
+fn part_2(compartments: Vec<&str>) -> Result<u32, ()> {
     compartments
         .chunks(3)
         .map(|group| {
             for c in group[0].chars() {
                 if group[1].contains(c) && group[2].contains(c) {
-                    return match get_priority_from_char(c) {
-                        Ok(priority) => priority,
-                        Err(_) => panic!("Invalid char outside of boundary"),
-                    };
+                    return get_priority_from_char(c);
                 }
             }
 
@@ -55,8 +49,8 @@ fn part_2(compartments: Vec<&str>) -> u32 {
 fn main() {
     let file = read_to_string("./test_files/day_3.txt").unwrap();
     let input: Vec<&str> = file.lines().collect();
-    println!("Part 1: {}", part_1(input.clone()));
-    println!("Part 2: {}", part_2(input));
+    println!("Part 1: {}", part_1(input.clone()).unwrap());
+    println!("Part 2: {}", part_2(input).unwrap());
 }
 
 #[test]
@@ -68,5 +62,5 @@ wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
 ttgJtRGJQctTZtZT
 CrZsJsPPZsGzwwsLwLmpwMDw";
 
-    assert_eq!(part_1(input.lines().collect()), 157);
+    assert_eq!(part_1(input.lines().collect()).unwrap(), 157);
 }
