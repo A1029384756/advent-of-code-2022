@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.71"
+itertools = "0.10.5"
 
 [[bin]]
 name = "day_1"
@@ -13,7 +15,10 @@ path = "src/day_1.rs"
 name = "day_2"
 path = "src/day_2.rs"
 
-
 [[bin]]
 name = "day_3"
 path = "src/day_3.rs"
+
+[[bin]]
+name = "day_4"
+path = "src/day_4.rs"
