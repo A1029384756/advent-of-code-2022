@@ -1,7 +1,12 @@
-use std::{fs::read_to_string, collections::HashSet};
+use std::{collections::HashSet, fs::read_to_string};
 
 fn find_marker(input: &str, n: usize) -> usize {
-    input.as_bytes().windows(n).position(|window| window.iter().collect::<HashSet<_>>().len() == n).unwrap() + n
+    input
+        .as_bytes()
+        .windows(n)
+        .position(|window| window.iter().collect::<HashSet<_>>().len() == n)
+        .unwrap()
+        + n
 }
 
 fn part_1(input: &str) -> usize {
