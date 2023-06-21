@@ -184,7 +184,7 @@ fn part_1(fs: &NodeContainer) -> u32 {
     get_subdirs(fs.clone())
         .map(|d| d.borrow().total_size())
         .filter(|&s| s <= 100000)
-        .sum::<u32>()
+        .sum()
 }
 
 fn part_2(fs: &NodeContainer) -> u32 {
