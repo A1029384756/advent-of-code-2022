@@ -180,21 +180,21 @@ fn create_tree(input: &str) -> NodeContainer {
     root
 }
 
-fn part_1(fs: &NodeContainer) -> u32 {
-    get_subdirs(fs.clone())
+fn part_1(fs: NodeContainer) -> u32 {
+    get_subdirs(fs)
         .map(|d| d.borrow().total_size())
         .filter(|&s| s <= 100000)
         .sum()
 }
 
-fn part_2(fs: &NodeContainer) -> u32 {
+fn part_2(fs: NodeContainer) -> u32 {
     let total_space = 70000000;
     let used_space = fs.borrow().total_size();
     let free_space = total_space - used_space;
     let needed_free_space = 30000000;
     let reclaim_min_amount = needed_free_space - free_space;
 
-    get_subdirs(fs.clone()).map(|d| d.borrow().total_size())
+    get_subdirs(fs).map(|d| d.borrow().total_size())
         .filter(|&s| s >= reclaim_min_amount)
         .min().unwrap()
 }
@@ -202,6 +202,6 @@ fn part_2(fs: &NodeContainer) -> u32 {
 fn main() {
     let input = &read_to_string("./test_files/day_7.txt").expect("File does not exist");
     let root = create_tree(input);
-    println!("Part 1: {}", part_1(&root));
-    println!("Part 2: {}", part_2(&root));
+    println!("Part 1: {}", part_1(root.clone()));
+    println!("Part 2: {}", part_2(root));
 }
