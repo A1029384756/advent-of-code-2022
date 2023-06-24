@@ -5,7 +5,6 @@ use nom::combinator::{all_consuming, map, map_res};
 use nom::multi::separated_list1;
 use nom::sequence::{delimited, preceded, tuple};
 use nom::{Finish, IResult};
-use std::fs::read_to_string;
 
 struct Instruction {
     src: usize,
@@ -156,7 +155,7 @@ fn part_2(input: &str) -> String {
 }
 
 fn main() {
-    let input = &read_to_string("./test_files/day_5.txt").expect("File does not exist");
+    let input = &include_str!("test_files/day_5.txt");
 
     println!("Part 1: {}", part_1(input));
     println!("Part 2: {}", part_2(input));

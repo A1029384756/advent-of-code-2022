@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs::read_to_string;
 use std::path::PathBuf;
 
 use nom::branch::alt;
@@ -200,7 +199,7 @@ fn part_2(fs: NodeContainer) -> u32 {
 }
 
 fn main() {
-    let input = &read_to_string("./test_files/day_7.txt").expect("File does not exist");
+    let input = &include_str!("test_files/day_7.txt");
     let root = create_tree(input);
     println!("Part 1: {}", part_1(root.clone()));
     println!("Part 2: {}", part_2(root));

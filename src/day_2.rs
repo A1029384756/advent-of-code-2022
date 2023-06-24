@@ -1,5 +1,3 @@
-use std::fs::read_to_string;
-
 #[derive(Clone, Copy)]
 enum Choice {
     Rock = 1,
@@ -91,7 +89,7 @@ fn part_2(input: &str) -> u32 {
 }
 
 fn main() {
-    let input = read_to_string("./test_files/day_2.txt").unwrap();
+    let input = include_str!("test_files/day_2.txt");
     println!("Part 1: {}", part_1(&input));
     println!("Part 2: {}", part_2(&input));
 }

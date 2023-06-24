@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fs::read_to_string};
+use std::collections::HashSet;
 
 fn find_marker(input: &str, n: usize) -> usize {
     input
@@ -18,7 +18,7 @@ fn part_2(input: &str) -> usize {
 }
 
 fn main() {
-    let input = read_to_string("./test_files/day_6.txt").unwrap();
+    let input = include_str!("test_files/day_6.txt");
     println!("Part 1: {}", part_1(&input));
     println!("Part 2: {}", part_2(&input));
 }

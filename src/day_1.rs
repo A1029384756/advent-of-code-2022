@@ -1,16 +1,4 @@
-use std::{cmp::Reverse, collections::BinaryHeap, fs::read_to_string};
-
-fn get_calories_from_file(path: &str) -> Vec<u32> {
-    match read_to_string(path) {
-        Ok(str) => str
-            .lines()
-            .collect::<Vec<_>>()
-            .split(|line| line.is_empty())
-            .map(|group| group.iter().map(|v| v.parse::<u32>().unwrap()).sum())
-            .collect(),
-        Err(_) => vec![],
-    }
-}
+use std::{cmp::Reverse, collections::BinaryHeap};
 
 fn part_1(elf_carry_load: &Vec<u32>) {
     println!("Part 1: {}", elf_carry_load.iter().max().unwrap());
@@ -32,18 +20,24 @@ fn part_2(elf_carry_load: &Vec<u32>) {
 }
 
 fn main() {
-    let elf_carry_load = get_calories_from_file("./test_files/day_1.txt");
+    let elf_carry_load = include_str!("test_files/day_1.txt")
+        .lines()
+        .collect::<Vec<_>>()
+        .split(|line| line.is_empty())
+        .map(|group| group.iter().map(|v| v.parse::<u32>().unwrap()).sum())
+        .collect();
     part_1(&elf_carry_load);
     part_2(&elf_carry_load);
 }
 
 #[test]
 fn test_part_1() {
-    assert_eq!(
-        &24000,
-        get_calories_from_file("./test_files/day_1_test.txt")
-            .iter()
-            .max()
-            .unwrap()
-    );
+    let elf_carry_load: Vec<u32> = include_str!("test_files/day_1_test.txt")
+        .lines()
+        .collect::<Vec<_>>()
+        .split(|line| line.is_empty())
+        .map(|group| group.iter().map(|v| v.parse::<u32>().unwrap()).sum())
+        .collect();
+
+    assert_eq!(&24000, elf_carry_load.iter().max().unwrap());
 }

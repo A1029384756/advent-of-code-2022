@@ -1,5 +1,3 @@
-use std::fs::read_to_string;
-
 fn find_common_item_in_bag(bag: &str) -> Option<char> {
     let (first_compartment, second_compartment) = bag.split_at(bag.len() / 2);
     for c in first_compartment.chars() {
@@ -47,7 +45,7 @@ fn part_2(compartments: Vec<&str>) -> Result<u32, ()> {
 }
 
 fn main() {
-    let file = read_to_string("./test_files/day_3.txt").unwrap();
+    let file = include_str!("test_files/day_3.txt");
     let input: Vec<&str> = file.lines().collect();
     println!("Part 1: {}", part_1(input.clone()).unwrap());
     println!("Part 2: {}", part_2(input).unwrap());

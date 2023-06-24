@@ -6,7 +6,7 @@ use nom::{
     sequence::{preceded, tuple},
     Finish, IResult,
 };
-use std::{collections::VecDeque, fmt, fs::read_to_string, time::Duration};
+use std::{collections::VecDeque, fmt, time::Duration};
 
 use eframe::{egui, epaint::ahash::HashSet};
 use egui::{Color32, Sense, Slider, Stroke};
@@ -112,8 +112,7 @@ struct Simulation {
 
 impl Simulation {
     fn new() -> Self {
-        let instructions = read_to_string("./test_files/day_9.txt")
-            .unwrap()
+        let instructions = include_str!("test_files/day_9.txt")
             .lines()
             .map(|l| all_consuming(Instruction::parse)(l).finish().unwrap().1)
             .collect();

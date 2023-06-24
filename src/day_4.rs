@@ -1,5 +1,3 @@
-use std::fs::read_to_string;
-
 use anyhow::Result;
 
 fn get_sections(input: &str) -> Vec<Vec<u32>> {
@@ -34,14 +32,12 @@ fn part_1(sections: &Vec<Vec<u32>>) -> u32 {
 fn part_2(sections: &Vec<Vec<u32>>) -> u32 {
     sections
         .iter()
-        .map(|section| {
-            ((section[0] <= section[3]) && (section[1] >= section[2])) as u32
-        })
+        .map(|section| ((section[0] <= section[3]) && (section[1] >= section[2])) as u32)
         .sum()
 }
 
 fn main() -> Result<()> {
-    let file = &read_to_string("./test_files/day_4.txt").unwrap();
+    let file = &include_str!("test_files/day_4.txt");
     let sections = get_sections(file);
 
     println!("Part 1: {}", part_1(&sections));

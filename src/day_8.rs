@@ -1,5 +1,4 @@
 use core::fmt;
-use std::fs::read_to_string;
 
 use anyhow::Result;
 
@@ -114,7 +113,7 @@ fn part_2(g: &Grid) -> usize {
 }
 
 fn main() -> Result<()> {
-    let input = &read_to_string("./test_files/day_8.txt").expect("File does not exist");
+    let input = &include_str!("test_files/day_8.txt");
     let grid = Grid::new(input);
     println!("{}", part_1(&grid));
     println!("{}", part_2(&grid));

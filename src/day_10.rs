@@ -7,7 +7,7 @@ use nom::{
     sequence::preceded,
     Finish, IResult,
 };
-use std::{collections::VecDeque, fs::read_to_string};
+use std::collections::VecDeque;
 
 const DISPLAY_MASK: u64 = 0b1111111111111111111111111111111111111111;
 
@@ -157,7 +157,7 @@ fn part_2(input: &str) -> String {
 }
 
 fn main() -> Result<()> {
-    let input = &read_to_string("./test_files/day_10.txt").expect("File does not exist");
+    let input = &include_str!("test_files/day_10.txt");
     println!("Part 1: {}", part_1(input));
     println!("Part 2:\n{}", part_2(input));
 
