@@ -1,4 +1,5 @@
 use anyhow::Result;
+use core::fmt;
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -6,11 +7,7 @@ use nom::{
     sequence::preceded,
     Finish, IResult,
 };
-use core::fmt;
-use std::{
-    collections::VecDeque,
-    fs::read_to_string,
-};
+use std::{collections::VecDeque, fs::read_to_string};
 
 const DISPLAY_MASK: u64 = 0b1111111111111111111111111111111111111111;
 
@@ -110,7 +107,7 @@ impl fmt::Debug for CPU {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for line in &self.display {
             for i in 0..40 {
-                let c = if line & cycle_mask(i) > 0 {'#'} else { '.' } ;
+                let c = if line & cycle_mask(i) > 0 { '#' } else { '.' };
                 write!(f, "{c}")?;
             }
             writeln!(f)?;
@@ -123,7 +120,6 @@ impl fmt::Debug for CPU {
 fn sprite_value(pos: i32) -> u64 {
     let bitmask = 0b11100000000000000000000000000000000000000_u64;
     let shft;
-
     if pos < 0 {
         (shft, _) = bitmask.overflowing_shl((-pos).try_into().unwrap());
     } else {
