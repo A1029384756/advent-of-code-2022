@@ -5,8 +5,21 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.71"
+eframe = { version = "0.22.0", default-features = false, features = [
+  "accesskit",
+  "default_fonts",
+  "glow",
+  "wayland",
+  "persistence",
+] }
+egui = "0.22.0"
 itertools = "0.10.5"
 nom = "7.1.3"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1.7"
+tracing-wasm = "0.2.1"
+wasm-bindgen-futures = "0.4.37"
 
 [[bin]]
 name = "day_1"

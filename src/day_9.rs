@@ -1,5 +1,3 @@
-use anyhow::Result;
-
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -8,11 +6,10 @@ use nom::{
     sequence::{preceded, tuple},
     Finish, IResult,
 };
-use std::{
-    collections::{HashSet, VecDeque},
-    fmt,
-    fs::read_to_string,
-};
+use std::{collections::VecDeque, fmt, fs::read_to_string, time::Duration};
+
+use eframe::{egui, epaint::ahash::HashSet};
+use egui::{Color32, Sense, Slider, Stroke};
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq)]
 struct GridCoord {
@@ -107,11 +104,16 @@ struct Simulation {
     instructions: VecDeque<Instruction>,
     knots: [GridCoord; 10],
     tail_visited: HashSet<GridCoord>,
+    speed: u32,
+    paused: bool,
+    show_sidebar: bool,
+    step: bool,
 }
 
 impl Simulation {
-    fn new(i: &str) -> Self {
-        let instructions = i
+    fn new() -> Self {
+        let instructions = read_to_string("./test_files/day_9.txt")
+            .unwrap()
             .lines()
             .map(|l| all_consuming(Instruction::parse)(l).finish().unwrap().1)
             .collect();
@@ -120,6 +122,10 @@ impl Simulation {
             instructions,
             knots: [GridCoord { x: 0, y: 0 }; 10],
             tail_visited: HashSet::default(),
+            speed: 1,
+            paused: true,
+            show_sidebar: true,
+            step: false,
         }
     }
 
@@ -165,17 +171,173 @@ impl Simulation {
     }
 }
 
-fn simulate(i: &str) -> usize {
-    let mut sim = Simulation::new(i);
-    while !sim.instructions.is_empty() {
-        sim.step();
-    }
+impl eframe::App for Simulation {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.style_mut().spacing.interact_size.y *= 1.4;
+                ui.style_mut()
+                    .text_styles
+                    .get_mut(&egui::TextStyle::Button)
+                    .unwrap()
+                    .size *= 1.4;
 
-    sim.tail_visited.len()
+                if ui.button("Reset").clicked() {
+                    *self = Self::new();
+                }
+                if ui.button("Step").clicked() {
+                    self.step = true;
+                }
+
+                let paused = self.paused;
+                ui.toggle_value(&mut self.paused, if paused { "▶" } else { "⏸" });
+
+                ui.toggle_value(&mut self.show_sidebar, "Sidebar");
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Speed: ");
+                ui.add(Slider::new(&mut self.speed, 1..=20).prefix("x"));
+            });
+        });
+
+        if self.step {
+            self.step();
+            self.step = false;
+        } else if !self.paused {
+            (0..self.speed).for_each(|_| {
+                self.step();
+            });
+            ctx.request_repaint_after(Duration::from_millis(25));
+        }
+
+        if self.show_sidebar {
+            egui::SidePanel::right("side_panel").show(ctx, |ui| {
+                ui.label(format!("{} places visited", self.tail_visited.len()));
+                egui::ScrollArea::new([false, true]).show(ui, |ui| {
+                    let mut it = self.instructions.iter();
+                    for (i, ins) in it.by_ref().enumerate() {
+                        if i >= 20 {
+                            break;
+                        }
+
+                        let arrow = match ins.dir {
+                            Direction::Up => "⬆",
+                            Direction::Down => "⬇",
+                            Direction::Right => "➡",
+                            Direction::Left => "⬅",
+                        };
+                        let dist = ins.dist as usize;
+                        if dist > 5 {
+                            ui.label(format!("{}+{}", arrow.repeat(5), dist - 5));
+                        } else {
+                            ui.label(arrow.repeat(dist));
+                        }
+                    }
+                    let remaining = it.count();
+
+                    if remaining > 0 {
+                        ui.label(format!("(+ {remaining} more)"));
+                    }
+                })
+            });
+        }
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let mut painter_size = ui.available_size_before_wrap();
+            if !painter_size.is_finite() {
+                painter_size = egui::vec2(500.0, 500.0);
+            }
+
+            const SIDE: f32 = 5.0;
+
+            let (res, painter) = ui.allocate_painter(painter_size, Sense::hover());
+            let center = res.rect.center().to_vec2();
+
+            let to_panel_pos = |pos: GridCoord| {
+                (egui::vec2(pos.x as f32 * SIDE, pos.y as f32 * SIDE) + center).to_pos2()
+            };
+
+            let half_width = (painter_size.x / SIDE).floor() as i32;
+            let half_height = (painter_size.y / SIDE).floor() as i32;
+
+            for x in -half_width..half_width {
+                for y in -half_height..half_height {
+                    let dot = GridCoord { x, y };
+                    let color = if dot.x == 0 && dot.y == 0 {
+                        Color32::WHITE
+                    } else if self.tail_visited.contains(&dot) {
+                        Color32::DARK_RED
+                    } else {
+                        continue;
+                    };
+
+                    let dot_pos = to_panel_pos(dot);
+                    painter.circle_stroke(dot_pos, 1.0, Stroke::new(2.0, color));
+                }
+            }
+
+            let num_knots = self.knots.len();
+
+            for (i, knot_pos) in self.knots.iter().copied().enumerate() {
+                let knot_pos = to_panel_pos(knot_pos);
+                if i > 0 {
+                    let prev_pos = to_panel_pos(self.knots[i - 1]);
+                    painter.arrow(
+                        prev_pos,
+                        knot_pos - prev_pos,
+                        Stroke::new(1.0, Color32::YELLOW),
+                    )
+                }
+            }
+
+            for (i, knot_pos) in self.knots.iter().copied().enumerate() {
+                let knot_pos = to_panel_pos(knot_pos);
+                painter.circle_filled(
+                    knot_pos,
+                    2.0,
+                    Color32::from_rgb(
+                        20,
+                        60 + ((255.0 - 60.0) * (num_knots as f32 - i as f32) / num_knots as f32)
+                            as u8,
+                        20,
+                    ),
+                );
+            }
+        });
+    }
 }
 
-fn main() -> Result<()> {
-    let input = &read_to_string("./test_files/day_9.txt")?;
-    println!("Result: {}", simulate(input));
-    Ok(())
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    console_error_panic_hook::set_once();
+    tracing_wasm::set_as_global_default();
+
+    let web_options = eframe::WebOptions::default();
+
+    wasm_bindgen_futures::spawn_local(async {
+        eframe::WebRunner::new()
+            .start(
+                "canvas",
+                web_options,
+                Box::new(|_cc| Box::new(Simulation::new())),
+            )
+            .await
+            .expect("eframe failed to start");
+    });
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn main() {
+    let options = eframe::NativeOptions {
+        initial_window_size: Some(egui::vec2(1280.0, 720.0)),
+        ..Default::default()
+    };
+
+    eframe::run_native(
+        "Advent of Code 2022 - Day 9",
+        options,
+        Box::new(|_cc| Box::new(Simulation::new())),
+    )
+    .expect("eframe failed to start");
 }
