@@ -9,7 +9,7 @@ use nom::{
 use std::{collections::VecDeque, fmt, time::Duration};
 
 use eframe::{egui, epaint::ahash::HashSet};
-use egui::{Color32, Sense, Slider, Stroke};
+use egui::{Color32, Sense, Slider, Stroke, Vec2};
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq)]
 struct GridCoord {
@@ -50,6 +50,15 @@ impl std::ops::Sub for GridCoord {
         GridCoord {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
+        }
+    }
+}
+
+impl From<GridCoord> for Vec2 {
+    fn from(value: GridCoord) -> Self {
+        Vec2 {
+            x: value.x as f32,
+            y: value.y as f32,
         }
     }
 }
@@ -108,6 +117,8 @@ struct Simulation {
     paused: bool,
     show_sidebar: bool,
     step: bool,
+    view_origin: Vec2,
+    zoom_level: f32,
 }
 
 impl Simulation {
@@ -125,6 +136,8 @@ impl Simulation {
             paused: true,
             show_sidebar: true,
             step: false,
+            view_origin: Vec2::default(),
+            zoom_level: 1.0,
         }
     }
 
@@ -250,31 +263,33 @@ impl eframe::App for Simulation {
 
             const SIDE: f32 = 5.0;
 
-            let (res, painter) = ui.allocate_painter(painter_size, Sense::hover());
+            let (res, painter) = ui.allocate_painter(painter_size, Sense::drag());
+
+            let scroll_delta = ui.input(|i| i.scroll_delta);
+            if scroll_delta != Vec2::ZERO {
+                self.zoom_level += scroll_delta.y * 0.0005;
+            }
+
+            if res.dragged_by(egui::PointerButton::Primary) {
+                res.clone().on_hover_cursor(egui::CursorIcon::Grabbing);
+                self.view_origin += res.drag_delta();
+            }
+
             let center = res.rect.center().to_vec2();
+            let zoom_clamped = self.zoom_level.clamp(0.1, 10.0);
+            let zoom_vec = Vec2::new(zoom_clamped, zoom_clamped);
 
             let to_panel_pos = |pos: GridCoord| {
-                (egui::vec2(pos.x as f32 * SIDE, pos.y as f32 * SIDE) + center).to_pos2()
+                ((Vec2::new(pos.x as f32 * SIDE, pos.y as f32 * SIDE) * zoom_vec)
+                    + center
+                    + self.view_origin)
+                    .to_pos2()
             };
 
-            let half_width = (painter_size.x / SIDE).floor() as i32;
-            let half_height = (painter_size.y / SIDE).floor() as i32;
-
-            for x in -half_width..half_width {
-                for y in -half_height..half_height {
-                    let dot = GridCoord { x, y };
-                    let color = if dot.x == 0 && dot.y == 0 {
-                        Color32::WHITE
-                    } else if self.tail_visited.contains(&dot) {
-                        Color32::DARK_RED
-                    } else {
-                        continue;
-                    };
-
-                    let dot_pos = to_panel_pos(dot);
-                    painter.circle_stroke(dot_pos, 1.0, Stroke::new(2.0, color));
-                }
-            }
+            self.tail_visited.iter().for_each(|coord| {
+                let dot_pos = to_panel_pos(*coord);
+                painter.circle_stroke(dot_pos, 2.0, Stroke::new(2.0, Color32::DARK_RED));
+            });
 
             let num_knots = self.knots.len();
 
