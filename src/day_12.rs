@@ -1,5 +1,8 @@
-use anyhow::Result;
-use std::collections::{HashMap, HashSet};
+use egui::{Color32, Rect, Rounding, Sense, Slider, Stroke, Vec2};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 
 #[derive(Debug, Copy, Clone, Ord, Eq, PartialEq, PartialOrd)]
 enum Cell {
@@ -53,9 +56,18 @@ struct Grid {
     visited: HashMap<Coord, PrevCell>,
     current: HashSet<Coord>,
     steps: usize,
+    speed: u32,
+    paused: bool,
+    step: bool,
+    finished: bool,
 }
 
 impl Grid {
+    fn new() -> Self {
+        let i = include_str!("test_files/day_12.txt");
+        Self::parse(i)
+    }
+
     fn parse(i: &str) -> Self {
         let width = i.lines().next().expect("Should not be empty").len();
         let height = i.lines().count();
@@ -75,6 +87,10 @@ impl Grid {
             visited: Default::default(),
             current: Default::default(),
             steps: 0,
+            speed: 1,
+            paused: true,
+            step: false,
+            finished: false,
         }
     }
 
@@ -117,46 +133,16 @@ impl Grid {
             .collect()
     }
 
-    fn step_part_1(&mut self) -> bool {
+    fn step(&mut self) {
+        if self.finished {
+            return;
+        }
+
         if self.current.is_empty() {
             let end_coord = self.get_end();
             self.current.insert(end_coord);
             self.visited.insert(end_coord, PrevCell::from(None));
-            return false;
-        }
-
-        let current = std::mem::take(&mut self.current);
-        let mut next = HashSet::new();
-        let mut visited = std::mem::take(&mut self.visited);
-
-        for curr in current {
-            for neighbor in self.possible_neighbors(curr) {
-                if let Some(Cell::Start) = self.get_cell(neighbor) {
-                    self.steps += 1;
-                    return true;
-                }
-
-                if visited.contains_key(&neighbor) {
-                    continue;
-                }
-
-                visited.insert(neighbor, PrevCell::from(Some(curr)));
-                next.insert(neighbor);
-            }
-        }
-
-        self.current = next;
-        self.visited = visited;
-        self.steps += 1;
-        false
-    }
-
-    fn step_part_2(&mut self) -> bool {
-        if self.current.is_empty() {
-            let end_coord = self.get_end();
-            self.current.insert(end_coord);
-            self.visited.insert(end_coord, PrevCell::from(None));
-            return false;
+            return;
         }
 
         let current = std::mem::take(&mut self.current);
@@ -167,7 +153,9 @@ impl Grid {
             for neighbor in self.possible_neighbors(curr) {
                 if self.get_cell(neighbor).unwrap().get_height() == Cell::Start.get_height() {
                     self.steps += 1;
-                    return true;
+                    self.finished = true;
+                    self.visited = visited;
+                    return;
                 }
 
                 if visited.contains_key(&neighbor) {
@@ -182,53 +170,110 @@ impl Grid {
         self.current = next;
         self.visited = visited;
         self.steps += 1;
-        false
     }
 }
 
-fn part_1(i: &str) -> usize {
-    let mut g = Grid::parse(i);
-    while !g.step_part_1() {}
+impl eframe::App for Grid {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                if ui.button("Reset").clicked() {
+                    *self = Self::new();
+                }
 
-    g.steps
+                if ui.button("Step").clicked() {
+                    self.step();
+                }
+
+                let paused = self.paused;
+                ui.toggle_value(&mut self.paused, if paused { "▶" } else { "⏸" });
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Speed: ");
+                ui.add(Slider::new(&mut self.speed, 1..=20).prefix("x"));
+            });
+        });
+
+        if self.step {
+            self.step();
+            self.step = false;
+        } else if !self.paused {
+            (0..self.speed).for_each(|_| {
+                self.step();
+            });
+            ctx.request_repaint_after(Duration::from_millis(25));
+        }
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let mut painter_size = ui.available_size_before_wrap();
+            if !painter_size.is_finite() {
+                painter_size = egui::vec2(500.0, 500.0);
+            }
+
+            let (res, painter) = ui.allocate_painter(painter_size, Sense::drag());
+
+            if res.dragged_by(egui::PointerButton::Primary) {
+                res.clone().on_hover_cursor(egui::CursorIcon::Grabbing);
+            }
+
+            let side = painter_size / Vec2::new(self.width as f32, self.height as f32);
+
+            let remap = |val: f32, from: (f32, f32), to: (f32, f32)| {
+                to.0 + (val - from.0) * (to.1 - to.0) / (from.1 - from.0)
+            };
+
+            let to_panel_pos =
+                |pos: Coord| (Vec2::new(pos.x as f32 * side.x, pos.y as f32 * side.y)).to_pos2();
+
+            let to_tile_color = |height: usize| {
+                Color32::from_gray(remap(
+                    height as f32,
+                    (
+                        Cell::Start.get_height() as f32,
+                        Cell::End.get_height() as f32,
+                    ),
+                    (0.0, 255.0),
+                ) as u8)
+            };
+
+            for x in 0..self.width {
+                for y in 0..self.height {
+                    let height = self.get_cell((x, y).into()).unwrap().get_height();
+                    let rect = Rect::from_center_size(to_panel_pos((x, y).into()), side);
+                    painter.rect_filled(rect, Rounding::same(0.0), to_tile_color(height));
+                }
+            }
+
+            for v in self.visited.iter() {
+                match v.1 {
+                    Some(prev) => {
+                        let curr_pos = to_panel_pos(*v.0);
+                        let prev_pos = to_panel_pos(*prev);
+                        painter.arrow(
+                            prev_pos,
+                            curr_pos - prev_pos,
+                            Stroke::new(1.0, Color32::YELLOW),
+                        )
+                    }
+                    None => {}
+                }
+            }
+        });
+    }
 }
 
-fn part_2(i: &str) -> usize {
-    let mut g = Grid::parse(i);
-    while !g.step_part_2() {}
+#[cfg(not(target_arch = "wasm32"))]
+fn main() {
+    let options = eframe::NativeOptions {
+        initial_window_size: Some(egui::vec2(1280.0, 720.0)),
+        ..Default::default()
+    };
 
-    g.steps
-}
-
-fn main() -> Result<()> {
-    let input = include_str!("test_files/day_12.txt");
-    println!("Part 1: {}", part_1(input));
-    println!("Part 2: {}", part_2(input));
-    Ok(())
-}
-
-#[test]
-fn parse_test() {
-    let input = include_str!("test_files/day_12_test.txt");
-    let g = Grid::parse(input);
-
-    assert_eq!(g.width, 8);
-    assert_eq!(g.height, 5);
-    assert_eq!(g.get_end(), (5, 2).into());
-}
-
-#[test]
-fn part_1_test() {
-    let input = include_str!("test_files/day_12_test.txt");
-    let result = part_1(input);
-
-    assert_eq!(result, 31);
-}
-
-#[test]
-fn part_2_test() {
-    let input = include_str!("test_files/day_12_test.txt");
-    let result = part_2(input);
-
-    assert_eq!(result, 29);
+    eframe::run_native(
+        "Advent of Code 2022 - Day 9",
+        options,
+        Box::new(|_cc| Box::new(Grid::new())),
+    )
+    .expect("eframe failed to start");
 }
