@@ -126,5 +126,4 @@ fn test_grid_creation() {
     let input = "30373\n25512\n65332\n33549\n35390";
     let g = Grid::new(input);
     assert_eq!(format!("{g:?}"), "30373\n25512\n65332\n33549\n35390\n");
-    println!("{g:?}");
 }
