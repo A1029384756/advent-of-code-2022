@@ -1,8 +1,46 @@
 use egui::{Color32, Rect, Rounding, Sense, Slider, Stroke, Vec2};
+use itertools::izip;
 use std::{
     collections::{HashMap, HashSet},
     time::Duration,
 };
+
+trait Interpolate {
+    type T;
+    fn lerp(v: Self::T, f: (Self::T, Self::T), t: (Self::T, Self::T)) -> Self::T;
+}
+
+impl Interpolate for Color32 {
+    type T = Color32;
+
+    fn lerp(
+        v: Self::T,
+        (f_min, f_max): (Self::T, Self::T),
+        (t_min, t_max): (Self::T, Self::T),
+    ) -> Self::T {
+        let map_range = |val: f32, from: (f32, f32), to: (f32, f32)| {
+            to.0 + (val - from.0) * (to.1 - to.0) / (from.1 - from.0)
+        };
+
+        let arr = izip!(
+            f_min.to_array(),
+            f_max.to_array(),
+            t_min.to_array(),
+            t_max.to_array(),
+            v.to_array()
+        )
+        .map(|(f_min, f_max, t_min, t_max, v)| {
+            map_range(
+                v as f32,
+                (f_min as f32, f_max as f32),
+                (t_min as f32, t_max as f32),
+            ) as u8
+        })
+        .collect::<Vec<u8>>();
+
+        Color32::from_rgb(arr[0], arr[1], arr[2])
+    }
+}
 
 #[derive(Debug, Copy, Clone, Ord, Eq, PartialEq, PartialOrd)]
 enum Cell {
@@ -213,50 +251,58 @@ impl eframe::App for Grid {
 
             let (res, painter) = ui.allocate_painter(painter_size, Sense::drag());
 
-            if res.dragged_by(egui::PointerButton::Primary) {
-                res.clone().on_hover_cursor(egui::CursorIcon::Grabbing);
-            }
+            let tile_max_size = Vec2::new(
+                res.rect.width() / self.width as f32,
+                res.rect.height() / self.height as f32,
+            );
 
-            let side = painter_size / Vec2::new(self.width as f32, self.height as f32);
+            let side = tile_max_size.min_elem();
 
-            let remap = |val: f32, from: (f32, f32), to: (f32, f32)| {
-                to.0 + (val - from.0) * (to.1 - to.0) / (from.1 - from.0)
+            let anchor = (res.rect.right_bottom().to_vec2()
+                - Vec2::new(side * self.width as f32, side * self.height as f32))
+                / 2.;
+
+            let to_panel_pos = |pos: Coord| {
+                ((Vec2::new(pos.x as f32 * side, pos.y as f32 * side)) + anchor).to_pos2()
             };
 
-            let to_panel_pos =
-                |pos: Coord| (Vec2::new(pos.x as f32 * side.x, pos.y as f32 * side.y)).to_pos2();
+            let style = &ctx.style().visuals;
+            painter.rect_filled(res.rect, Rounding::same(0.0), style.window_fill());
 
             let to_tile_color = |height: usize| {
-                Color32::from_gray(remap(
-                    height as f32,
-                    (
-                        Cell::Start.get_height() as f32,
-                        Cell::End.get_height() as f32,
-                    ),
-                    (0.0, 255.0),
-                ) as u8)
+                let bg = style.window_fill();
+                let fg = style.text_color();
+                let from_bg = Color32::from_gray(Cell::Start.get_height() as u8);
+                let from_fg = Color32::from_gray(Cell::End.get_height() as u8);
+                let tile = Color32::from_gray(height as u8);
+
+                Color32::lerp(tile, (from_bg, from_fg), (bg, fg))
             };
 
             for x in 0..self.width {
                 for y in 0..self.height {
+                    let rect = Rect::from_center_size(
+                        to_panel_pos((x, y).into()),
+                        Vec2::new(side + 1., side + 1.),
+                    );
                     let height = self.get_cell((x, y).into()).unwrap().get_height();
-                    let rect = Rect::from_center_size(to_panel_pos((x, y).into()), side);
                     painter.rect_filled(rect, Rounding::same(0.0), to_tile_color(height));
                 }
             }
 
+            let arrow_color = Color32::YELLOW;
             for v in self.visited.iter() {
                 match v.1 {
                     Some(prev) => {
                         let curr_pos = to_panel_pos(*v.0);
                         let prev_pos = to_panel_pos(*prev);
-                        painter.arrow(
-                            prev_pos,
-                            curr_pos - prev_pos,
-                            Stroke::new(1.0, Color32::YELLOW),
-                        )
+                        painter.circle_filled(curr_pos, side * 0.1, arrow_color);
+                        painter.arrow(prev_pos, curr_pos - prev_pos, Stroke::new(1.0, arrow_color))
                     }
-                    None => {}
+                    None => {
+                        let pos = to_panel_pos(*v.0);
+                        painter.circle_filled(pos, side * 0.3, arrow_color);
+                    }
                 }
             }
         });
