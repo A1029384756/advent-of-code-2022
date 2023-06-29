@@ -1,7 +1,6 @@
 #![feature(extract_if)]
 #![feature(generators)]
 #![feature(iter_from_generator)]
-
 use std::{fmt, time::Duration};
 
 use egui::{ColorImage, Slider, TextureOptions};
@@ -341,7 +340,7 @@ impl eframe::App for Grid {
     }
 }
 
-fn main() {
+fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         initial_window_size: Some(egui::vec2(1280.0, 720.0)),
         ..Default::default()
@@ -352,5 +351,4 @@ fn main() {
         options,
         Box::new(|_cc| Box::new(Grid::new())),
     )
-    .expect("eframe failed to start");
 }
