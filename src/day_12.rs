@@ -317,7 +317,7 @@ fn main() {
     };
 
     eframe::run_native(
-        "Advent of Code 2022 - Day 9",
+        "Advent of Code 2022 - Day 12",
         options,
         Box::new(|_cc| Box::new(Grid::new())),
     )

@@ -295,14 +295,10 @@ impl eframe::App for Grid {
         egui::CentralPanel::default().show(ctx, |ui| {
             let mut buff = ImageBuffer::new(self.width as _, self.height as _);
 
-            for pixel in buff.pixels_mut() {
-                *pixel = image::Rgba([255, 20, 20, 255]);
-            }
-
             let style = &ctx.style().visuals;
-            let air = style.window_fill();
+            let bg_color = style.window_fill();
 
-            let air_color: [u8; 4] = [air.r(), air.g(), air.b(), air.a()];
+            let air_color: [u8; 4] = [bg_color.r(), bg_color.g(), bg_color.b(), bg_color.a()];
             let rock_color: [u8; 4] = [160, 160, 160, 255];
             let sand_color: [u8; 4] = [130, 127, 88, 255];
             let curr_color: [u8; 4] = [245, 206, 49, 255];
@@ -347,7 +343,7 @@ fn main() -> Result<(), eframe::Error> {
     };
 
     eframe::run_native(
-        "Advent of Code 2022 - Day 9",
+        "Advent of Code 2022 - Day 14",
         options,
         Box::new(|_cc| Box::new(Grid::new())),
     )
