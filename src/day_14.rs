@@ -296,9 +296,7 @@ impl eframe::App for Grid {
             let mut buff = ImageBuffer::new(self.width as _, self.height as _);
 
             let style = &ctx.style().visuals;
-            let bg_color = style.window_fill();
-
-            let air_color: [u8; 4] = [bg_color.r(), bg_color.g(), bg_color.b(), bg_color.a()];
+            let air_color: [u8; 4] = style.window_fill().to_array();
             let rock_color: [u8; 4] = [160, 160, 160, 255];
             let sand_color: [u8; 4] = [130, 127, 88, 255];
             let curr_color: [u8; 4] = [245, 206, 49, 255];
